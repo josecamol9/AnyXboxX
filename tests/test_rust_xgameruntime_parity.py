@@ -54,13 +54,14 @@ def interface_matrix(folder):
         row.append([n for n in range(3, lengths[name]) if api.vtable[n] == default_stub
                     and (name, n) != ("TaskQueueInterface", 8)])
         rows.append(row)
-    assert len(rows) == 26 and len(set(addresses.values())) == len(addresses)
+    assert len(rows) == 30 and len(set(addresses.values())) == len(addresses)
     by_pair = {(p, i): row[-1] for (_, p, i), row in zip(entries, rows, strict=True)}
     refused = {api for api, p, i, slot in slots if int(slot) in by_pair.get((p, i), ())}
     # These handlers have their own ABI or diagnostics. They do not implement the service.
     refused.update(api for api, _, _, _ in slots if api.startswith("XUserGetTokenAndSignature"))
     refused.update({"XLaunchNewGame", "XLaunchUri", "XPersistentLocalStorageMountForPackage",
-                    "XPackageUninstallChunks", "XPackageUninstallUWPInstance", "XPackageUninstallPackage"})
+                    "XPackageUninstallChunks", "XPackageUninstallUWPInstance", "XPackageUninstallPackage",
+                    "XNetworkingSetConfigurationSetting"})
     inventory = (ROOT / "runtime/xgameruntime/unsupported.txt").read_text(encoding="utf-8").splitlines()
     assert sorted(refused) == inventory
     return rows

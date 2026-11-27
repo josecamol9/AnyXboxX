@@ -91,7 +91,7 @@ Profils (`crates/anyxboxx-launcher/profiles.toml`, un test chacun) :
 | `runtime/d3d12_xs` | `crates/anyxboxx-d3d12-xs` | `test_d3d12_virtual_memory.py`, `test_runtime_cpp.py`, table d'exports identique | **supprimé** |
 | `runtime/tls` (`anyxboxx_tls.dll`) | `crates/anyxboxx-tls`, cdylib `no_std` | `test_native_tls.py`, `test_native_tls_callbacks.py`, table d'exports identique | **supprimé** |
 | `runtime/xmem` | `crates/anyxboxx-xmem` (attributs ERA partagés avec le module xmem de VIctory) | `test_xmem_era.py`, `test_xmem_virtual.py`, `test_runtime_cpp.py`, table d'exports identique | **supprimé** |
-| `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` et `xasync` de VIctory | 17 exports PE et 26 couples fournisseur/interface vérifiés contre le C++ | DLL Rust dans le runtime natif. Inventaire et commandes ci-dessous. |
+| `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` et `xasync` de VIctory | 17 exports PE et 30 couples fournisseur/interface vérifiés contre le C++ | DLL Rust dans le runtime natif. Inventaire et commandes ci-dessous. |
 | `runtime/launcher` | `crates/anyxboxx-native-launcher` | `tests/test_rust_native_launcher_parity.py` lance la suite native synthétique contre les deux implémentations | gardé sous `anyxboxx_cpp.exe` comme oracle ; les cas TomBox demandent ses DLL |
 | Lanceur graphique | `crates/anyxboxx-launcher` (nouveau) | 190 tests Rust | |
 
@@ -123,7 +123,7 @@ Le lanceur natif charge `runtime/build/bin/xgameruntime.dll`, identique à la DL
 | 16 | `XGameRuntimeUninitialize` |
 | 17 | `XSystemGetDeviceType` |
 
-La table GDK contient 396 noms de fonctions. 262 appartiennent aux 26 couples que `QueryApiImpl` sert en mode local. Les alias partagent 19 objets. Le tableau donne les 210 emplacements reliés à une fonction spécifique dans les tables C++ après les trois méthodes IUnknown. Certains gestionnaires renvoient une erreur. Les autres emplacements de ces tables passent par le refus générique. Les deux fichiers `.inc` donnent les GUID et les noms de chaque méthode. Sur les 262 fonctions rattachées à ces objets, 52 passent par le refus générique et 12 ont leur propre gestionnaire de refus hors ligne ou de désinstallation. Les rapports comptent les 198 autres (198/396 au total).
+La table GDK contient 396 noms de fonctions. 363 appartiennent aux 30 couples que `QueryApiImpl` sert en mode local. Les alias partagent 23 objets. Le tableau donne les 276 emplacements reliés à une fonction spécifique dans les tables C++ après les trois méthodes IUnknown. Certains gestionnaires renvoient une erreur. Les autres emplacements de ces tables passent par le refus générique. Les deux fichiers `.inc` donnent les GUID et les noms de chaque méthode. Sur les 363 fonctions rattachées à ces objets, 87 passent par le refus générique et 13 ont leur propre gestionnaire de refus hors ligne, de désinstallation ou de réglage impossible sur PC. Les rapports comptent les 263 autres (263/396 au total).
 
 | Objet (sans le suffixe `Interface`) | Emplacements C++ |
 | --- | --- |
@@ -135,11 +135,17 @@ La table GDK contient 396 noms de fonctions. 262 appartiennent aux 26 couples qu
 | Invite, Activation, Protocol | 3–4 |
 | PendingInvite | 5–6 |
 | HdrDisplay | 4 |
-| Networking | 15–17 |
+| Networking | 15, 17–20 |
 | GameSave | 3–32 |
 | LocalStorage | 3–8 |
 | Package | 3–19, 22, 24–26, 30, 32–34, 37–41 |
 | Store | 3–16, 19–21, 28–29, 49–54, 58–64, 66–67, 71–78, 82–83 |
+| Streaming | 3–11, 13–33 |
+| GameUi | 3–19, 30–31, 42–50 |
+| Accessibility | 5 |
+| UserDevice | 5–6, 8–10 |
+
+XGameStreaming hors ligne, XGameUi (écrans confiés aux rappels du jeu), le contraste élevé XAccessibility, les périphériques XUser et les réglages des tampons TCP XNetworking répondent comme l’oracle C++. Leurs abonnements aux changements, qui ne seraient jamais notifiés, passent par le refus générique et figurent dans `unsupported.txt` ; `XNetworkingSetConfigurationSetting` journalise et renvoie `E_NOTIMPL`, car les tampons ne se règlent pas sur PC. Le code livré pour ces interfaces est le Rust de `crates/anyxboxx-xgameruntime/src/` (`streaming.rs`, `gameui.rs` avec `gameui_input.rs`, `gameui_requests.rs` et `gameui_responses.rs`, `accessibility.rs`, `user_device.rs`, `networking.rs`). Leurs gestionnaires C++ de `runtime/xgameruntime/` ne servent que d’oracle : `test_rust_dlls.py` lance chaque `test_runtime_*.py` sur les deux DLL, et la matrice des interfaces ci-dessus lit `served_interfaces.inc` et attend les mêmes réponses des deux.
 
 `test_rust_xgameruntime_parity.py` compare directement les deux DLL dans des processus distincts. Il appelle les initialiseurs et les trois fabriques DXGI, puis vérifie les alias, les réponses IUnknown, les emplacements de refus, les quatre images de profil, les octets d’un gamertag accentué et les callbacks d’un événement Windows. La file Rust gère maintenant les attentes aux emplacements 20 et 21, leur réarmement et leur retrait. Elle conserve les attentes d’une autre file qui partage le port. L’emplacement 0 répond à IUnknown et à l’IID de la file. L’emplacement 29 trace un appel bloquant sur un thread marqué sensible au temps.
 

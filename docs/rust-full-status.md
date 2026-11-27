@@ -91,7 +91,7 @@ Profiles (`crates/anyxboxx-launcher/profiles.toml`, one test each):
 | `runtime/d3d12_xs` | `crates/anyxboxx-d3d12-xs` | `test_d3d12_virtual_memory.py`, `test_runtime_cpp.py`, identical export table | **deleted** |
 | `runtime/tls` (`anyxboxx_tls.dll`) | `crates/anyxboxx-tls`, a `no_std` cdylib | `test_native_tls.py`, `test_native_tls_callbacks.py`, identical export table | **deleted** |
 | `runtime/xmem` | `crates/anyxboxx-xmem` (ERA attributes shared with VIctory's xmem module) | `test_xmem_era.py`, `test_xmem_virtual.py`, `test_runtime_cpp.py`, identical export table | **deleted** |
-| `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` and VIctory `xasync` | 17 PE exports and 26 provider/interface pairs checked against C++ | Native runtime ships the Rust DLL. Inventory and commands below. |
+| `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` and VIctory `xasync` | 17 PE exports and 30 provider/interface pairs checked against C++ | Native runtime ships the Rust DLL. Inventory and commands below. |
 | `runtime/launcher` | `crates/anyxboxx-native-launcher` | `tests/test_rust_native_launcher_parity.py` runs the synthetic native launcher suite against both implementations | kept as `anyxboxx_cpp.exe` for parity; TomBox-dependent cases require its DLLs |
 | Graphical launcher | `crates/anyxboxx-launcher` (new) | 190 Rust tests | |
 
@@ -123,7 +123,7 @@ The native launcher loads `runtime/build/bin/xgameruntime.dll`, byte-identical t
 | 16 | `XGameRuntimeUninitialize` |
 | 17 | `XSystemGetDeviceType` |
 
-The GDK table names 396 functions. Of these, 262 belong to the 26 pairs served by `QueryApiImpl` in local mode. Aliases share 19 objects. The table lists the 210 slots wired to specific C++ handlers after the three IUnknown methods. Some handlers return errors. The other slots in those tables use the generic refusal. The two `.inc` files give the GUIDs and method names. Of the 262 mapped functions on these objects, 52 use the generic refusal and 12 have explicit offline or uninstall refusals. The reports count the other 198 functions (198/396 overall).
+The GDK table names 396 functions. Of these, 363 belong to the 30 pairs served by `QueryApiImpl` in local mode. Aliases share 23 objects. The table lists the 276 slots wired to specific C++ handlers after the three IUnknown methods. Some handlers return errors. The other slots in those tables use the generic refusal. The two `.inc` files give the GUIDs and method names. Of the 363 mapped functions on these objects, 87 use the generic refusal and 13 have explicit offline, uninstall or PC-setting refusals. The reports count the other 263 functions (263/396 overall).
 
 | Object (without the `Interface` suffix) | C++ slots |
 | --- | --- |
@@ -135,11 +135,17 @@ The GDK table names 396 functions. Of these, 262 belong to the 26 pairs served b
 | Invite, Activation, Protocol | 3–4 |
 | PendingInvite | 5–6 |
 | HdrDisplay | 4 |
-| Networking | 15–17 |
+| Networking | 15, 17–20 |
 | GameSave | 3–32 |
 | LocalStorage | 3–8 |
 | Package | 3–19, 22, 24–26, 30, 32–34, 37–41 |
 | Store | 3–16, 19–21, 28–29, 49–54, 58–64, 66–67, 71–78, 82–83 |
+| Streaming | 3–11, 13–33 |
+| GameUi | 3–19, 30–31, 42–50 |
+| Accessibility | 5 |
+| UserDevice | 5–6, 8–10 |
+
+The offline XGameStreaming, XGameUi (screens handed to the game's callbacks), XAccessibility high contrast, XUser devices and XNetworking TCP buffer settings answer like the C++ oracle. Their change subscriptions, which would never be notified, use the generic refusal and are listed in `unsupported.txt`; `XNetworkingSetConfigurationSetting` logs and returns `E_NOTIMPL` because the buffers cannot be set on PC. The shipped code for these interfaces is the Rust in `crates/anyxboxx-xgameruntime/src/` (`streaming.rs`, `gameui.rs` with `gameui_input.rs`, `gameui_requests.rs` and `gameui_responses.rs`, `accessibility.rs`, `user_device.rs`, `networking.rs`). Their C++ handlers in `runtime/xgameruntime/` are only the oracle: `test_rust_dlls.py` runs every `test_runtime_*.py` against both DLLs, and the interface matrix above reads `served_interfaces.inc` and expects the same answers from both.
 
 `test_rust_xgameruntime_parity.py` compares the two DLLs directly in separate processes. It calls the initializers and all three DXGI factories and checks aliases, IUnknown results, stub placement, all four profile pictures, the bytes of an accented gamertag and callbacks from a Windows event. The Rust queue now handles wait registration at slots 20 and 21, rearming and removal. It preserves waits owned by another queue sharing the port. Slot 0 answers IUnknown and the queue IID. Slot 29 traces a blocking call on a time-sensitive thread.
 
